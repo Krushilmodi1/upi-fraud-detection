@@ -1,0 +1,1 @@
+["amount", "transaction_type", "device_id", "location", "session_duration", "pin_entry_method", "authentication_attempt_count", "hour_of_day", "day_of_week", "is_weekend", "is_night", "month", "amount_log", "is_high_value", "amount_zscore", "user_tx_count", "user_tx_mean_amount", "amount_vs_user_mean"]
