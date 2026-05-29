@@ -2,6 +2,7 @@ import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import { Toaster } from 'react-hot-toast';
 import { AuthProvider } from './context/AuthContext';
 import Navbar from './components/Navbar';
+import Chatbot from './components/Chatbot';
 import ProtectedRoute from './components/ProtectedRoute';
 
 import Home from './pages/Home';
@@ -13,6 +14,8 @@ import Analytics from './pages/Analytics';
 import FraudAssistance from './pages/FraudAssistance';
 import Profile from './pages/Profile';
 import AdminDashboard from './pages/AdminDashboard';
+import UPIScanner from './pages/UPIScanner';
+import DisputeHelper from './pages/DisputeHelper';
 
 function App() {
     return (
@@ -20,6 +23,7 @@ function App() {
             <BrowserRouter>
                 <Navbar />
                 <Toaster position="top-right" />
+                <Chatbot />
                 <Routes>
                     <Route path="/" element={<Home />} />
                     <Route path="/login" element={<Login />} />
@@ -41,6 +45,12 @@ function App() {
                     } />
                     <Route path="/admin" element={
                         <ProtectedRoute adminOnly={true}><AdminDashboard /></ProtectedRoute>
+                    } />
+                    <Route path="/upi-scanner" element={
+                        <ProtectedRoute><UPIScanner /></ProtectedRoute>
+                    } />
+                    <Route path="/dispute" element={
+                        <ProtectedRoute><DisputeHelper /></ProtectedRoute>
                     } />
                 </Routes>
             </BrowserRouter>

@@ -5,7 +5,7 @@ import API from '../api/axios';
 import toast from 'react-hot-toast';
 
 const Register = () => {
-    const [form, setForm] = useState({ name: '', email: '', password: '', role: 'user' });
+    const [form, setForm] = useState({ name: '', email: '', password: '' });
     const [loading, setLoading] = useState(false);
     const { login } = useAuth();
     const navigate = useNavigate();
@@ -14,7 +14,10 @@ const Register = () => {
         e.preventDefault();
         setLoading(true);
         try {
-            const res = await API.post('/auth/register', form);
+            const res = await API.post('/auth/register', {
+                ...form,
+                role: 'user'
+            });
             login(res.data.data, res.data.data.token);
             toast.success('Account created successfully!');
             navigate('/dashboard');
@@ -35,7 +38,7 @@ const Register = () => {
                         <label className="text-gray-300 text-sm mb-1 block">Full Name</label>
                         <input
                             type="text"
-                            placeholder="Krushil Modi"
+                            placeholder="Your full name"
                             value={form.name}
                             onChange={e => setForm({...form, name: e.target.value})}
                             className="w-full bg-gray-800 text-white px-4 py-3 rounded-lg border border-gray-700 focus:outline-none focus:border-blue-500"
@@ -63,17 +66,6 @@ const Register = () => {
                             className="w-full bg-gray-800 text-white px-4 py-3 rounded-lg border border-gray-700 focus:outline-none focus:border-blue-500"
                             required
                         />
-                    </div>
-                    <div>
-                        <label className="text-gray-300 text-sm mb-1 block">Role</label>
-                        <select
-                            value={form.role}
-                            onChange={e => setForm({...form, role: e.target.value})}
-                            className="w-full bg-gray-800 text-white px-4 py-3 rounded-lg border border-gray-700 focus:outline-none focus:border-blue-500"
-                        >
-                            <option value="user">User</option>
-                            <option value="admin">Admin</option>
-                        </select>
                     </div>
                     <button
                         type="submit"

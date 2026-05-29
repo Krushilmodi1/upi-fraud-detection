@@ -15,19 +15,68 @@ const Navbar = () => {
             <Link to="/" className="text-xl font-bold text-blue-400">
                 🛡️ UPI FraudGuard
             </Link>
+
             <div className="flex gap-6 items-center">
                 {user ? (
                     <>
-                        <Link to="/dashboard" className="hover:text-blue-400 transition">Dashboard</Link>
-                        <Link to="/detect" className="hover:text-blue-400 transition">Detect Fraud</Link>
-                        <Link to="/analytics" className="hover:text-blue-400 transition">Analytics</Link>
-                        <Link to="/assistance" className="hover:text-blue-400 transition">Assistance</Link>
+                        <Link
+                            to="/dashboard"
+                            className="hover:text-blue-400 transition"
+                        >
+                            Dashboard
+                        </Link>
+
+                        <Link
+                            to="/detect"
+                            className="hover:text-blue-400 transition"
+                        >
+                            Detect Fraud
+                        </Link>
+
+                        <Link
+                            to="/analytics"
+                            className="hover:text-blue-400 transition"
+                        >
+                            Analytics
+                        </Link>
+
+                        <Link
+                            to="/assistance"
+                            className="hover:text-blue-400 transition"
+                        >
+                            Assistance
+                        </Link>
+
+                        <Link
+                            to="/upi-scanner"
+                            className="hover:text-green-400 transition"
+                        >
+                            UPI Scanner
+                        </Link>
+
+                        <Link
+                            to="/dispute"
+                            className="hover:text-yellow-400 transition"
+                        >
+                            Dispute Helper
+                        </Link>
+
                         {user.role === 'admin' && (
-                            <Link to="/admin" className="hover:text-red-400 transition">Admin</Link>
+                            <Link
+                                to="/admin"
+                                className="hover:text-red-400 transition"
+                            >
+                                Admin
+                            </Link>
                         )}
-                        <Link to="/profile" className="hover:text-blue-400 transition">
+
+                        <Link
+                            to="/profile"
+                            className="hover:text-blue-400 transition"
+                        >
                             👤 {user.name}
                         </Link>
+
                         <button
                             onClick={handleLogout}
                             className="bg-red-600 hover:bg-red-700 px-4 py-2 rounded-lg transition"
@@ -37,9 +86,17 @@ const Navbar = () => {
                     </>
                 ) : (
                     <>
-                        <Link to="/login" className="hover:text-blue-400 transition">Login</Link>
-                        <Link to="/register"
-                            className="bg-blue-600 hover:bg-blue-700 px-4 py-2 rounded-lg transition">
+                        <Link
+                            to="/login"
+                            className="hover:text-blue-400 transition"
+                        >
+                            Login
+                        </Link>
+
+                        <Link
+                            to="/register"
+                            className="bg-blue-600 hover:bg-blue-700 px-4 py-2 rounded-lg transition"
+                        >
                             Register
                         </Link>
                     </>
