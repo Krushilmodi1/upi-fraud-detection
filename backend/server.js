@@ -17,7 +17,7 @@ app.use('/api/auth', require('./src/routes/auth'));
 app.use('/api/transactions', require('./src/routes/transactions'));
 app.use('/api/analytics', require('./src/routes/analytics'));
 app.use('/api/admin', require('./src/routes/admin'));
-
+app.use('/api/complaints', require('./src/routes/complaints'));
 app.get('/', (req, res) => {
     res.json({ message: 'UPI Fraud Detection Backend', status: 'running' });
 });

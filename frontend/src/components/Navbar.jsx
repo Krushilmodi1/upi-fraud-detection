@@ -53,7 +53,7 @@ const Navbar = () => {
                         >
                             UPI Scanner
                         </Link>
-
+                        <Link to="/complaints" className="hover:text-blue-400 transition">My Complaints</Link>
                         <Link
                             to="/dispute"
                             className="hover:text-yellow-400 transition"
@@ -92,7 +92,7 @@ const Navbar = () => {
                         >
                             Login
                         </Link>
-
+                        
                         <Link
                             to="/register"
                             className="bg-blue-600 hover:bg-blue-700 px-4 py-2 rounded-lg transition"

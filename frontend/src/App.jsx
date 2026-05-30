@@ -16,7 +16,7 @@ import Profile from './pages/Profile';
 import AdminDashboard from './pages/AdminDashboard';
 import UPIScanner from './pages/UPIScanner';
 import DisputeHelper from './pages/DisputeHelper';
-
+import MyComplaints from './pages/MyComplaints';
 function App() {
     return (
         <AuthProvider>
@@ -52,6 +52,9 @@ function App() {
                     <Route path="/dispute" element={
                         <ProtectedRoute><DisputeHelper /></ProtectedRoute>
                     } />
+                    <Route path="/complaints" element={
+    <ProtectedRoute><MyComplaints /></ProtectedRoute>
+} />
                 </Routes>
             </BrowserRouter>
         </AuthProvider>
