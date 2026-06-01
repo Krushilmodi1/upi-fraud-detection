@@ -48,11 +48,18 @@ const Dashboard = () => {
 
     const filtered = activeTab === 'fraud' ? transactions.filter(t => t.isFraud)
         : activeTab === 'safe' ? transactions.filter(t => !t.isFraud)
-        : transactions;
+            : transactions;
 
     const c = {
         page: { minHeight: '100vh', background: 'var(--bg-secondary)', padding: '24px' },
-        card: { background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: '16px', padding: '20px', boxShadow: 'var(--shadow)' },
+        card: {
+            background: 'var(--bg-card)',
+            border: '1px solid var(--border)',
+            borderRadius: '20px',
+            padding: '24px',
+            boxShadow: '0 10px 25px rgba(0,0,0,.08)',
+            transition: 'all .3s ease'
+        },
         label: { fontSize: '12px', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '4px' },
         val: (color = 'var(--text-primary)') => ({ fontSize: '32px', fontWeight: 800, color, lineHeight: 1 }),
         sub: { fontSize: '12px', color: 'var(--text-muted)', marginTop: '4px' },
@@ -102,22 +109,53 @@ const Dashboard = () => {
             <div className="fade" style={{ maxWidth: '1200px', margin: '0 auto' }}>
 
                 {/* Header */}
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '24px' }}>
+                <div
+                    style={{
+                        background: 'linear-gradient(135deg,#2563eb,#7c3aed)',
+                        borderRadius: '24px',
+                        padding: '32px',
+                        color: 'white',
+                        marginBottom: '24px',
+                        display: 'flex',
+                        justifyContent: 'space-between',
+                        alignItems: 'center'
+                    }}
+                >
                     <div>
-                        <h1 style={{ fontSize: '24px', fontWeight: 800, color: 'var(--text-primary)', margin: '0 0 4px' }}>
-                            Welcome back, {user?.name} 👋
+                        <h1 style={{ fontSize: '32px', fontWeight: 800, margin: 0 }}>
+                            🛡️ Security Center
                         </h1>
-                        <p style={{ color: 'var(--text-muted)', fontSize: '14px', margin: 0 }}>
-                            Your personal fraud protection dashboard
+
+                        <p style={{ marginTop: '8px', opacity: .9 }}>
+                            Welcome back, {user?.name}
                         </p>
+
+                        <div style={{ display: 'flex', gap: '30px', marginTop: '20px' }}>
+                            <div>
+                                <div style={{ fontSize: '28px', fontWeight: 800 }}>
+                                    {secScore}
+                                </div>
+                                <small>Security Score</small>
+                            </div>
+
+                            <div>
+                                <div style={{ fontSize: '28px', fontWeight: 800 }}>
+                                    {transactions.length}
+                                </div>
+                                <small>Transactions</small>
+                            </div>
+
+                            <div>
+                                <div style={{ fontSize: '28px', fontWeight: 800 }}>
+                                    {fraudCount}
+                                </div>
+                                <small>Threats Found</small>
+                            </div>
+                        </div>
                     </div>
-                    <div style={{ display: 'flex', gap: '10px' }}>
-                        <Link to="/detect" style={{ background: 'var(--accent)', color: 'white', padding: '10px 18px', borderRadius: '10px', textDecoration: 'none', fontSize: '14px', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '6px' }}>
-                            🔍 Analyze Transaction
-                        </Link>
-                        <Link to="/complaints" style={{ background: 'var(--bg-card)', color: 'var(--text-primary)', padding: '10px 18px', borderRadius: '10px', textDecoration: 'none', fontSize: '14px', fontWeight: 600, border: '1px solid var(--border)' }}>
-                            📋 My Complaints
-                        </Link>
+
+                    <div style={{ fontSize: '90px' }}>
+                        🛡️
                     </div>
                 </div>
 
@@ -184,7 +222,35 @@ const Dashboard = () => {
                             </AreaChart>
                         </ResponsiveContainer>
                     </div>
+                    <div style={{
+                        ...c.card,
+                        marginBottom: '20px'
+                    }}>
+                        <h3 style={{
+                            marginTop: 0,
+                            color: 'var(--text-primary)'
+                        }}>
+                            🤖 AI Security Assistant
+                        </h3>
 
+                        <div style={{
+                            display: 'grid',
+                            gridTemplateColumns: 'repeat(3,1fr)',
+                            gap: '15px'
+                        }}>
+                            <div>
+                                ✅ No suspicious UPI IDs detected
+                            </div>
+
+                            <div>
+                                🛡️ Security Score: {secScore}/100
+                            </div>
+
+                            <div>
+                                ⚠️ Avoid sending money to unknown users
+                            </div>
+                        </div>
+                    </div>
                     <div style={c.card}>
                         <div style={{ fontSize: '14px', fontWeight: 600, color: 'var(--text-primary)', marginBottom: '8px' }}>
                             🥧 Fraud vs Safe
@@ -210,7 +276,10 @@ const Dashboard = () => {
                 </div>
 
                 {/* Quick Actions */}
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: '12px', marginBottom: '20px' }}>
+                <div style={{
+                    display: 'grid', gridTemplateColumns:
+                        'repeat(auto-fit,minmax(220px,1fr))', gap: '12px', marginBottom: '20px'
+                }}>
                     {[
                         { icon: '🔍', label: 'Detect Fraud', desc: 'Analyze transaction', to: '/detect' },
                         { icon: '🔎', label: 'UPI Scanner', desc: 'Check UPI ID', to: '/upi-scanner' },
@@ -229,7 +298,83 @@ const Dashboard = () => {
                         </Link>
                     ))}
                 </div>
+                <div
+                    style={{
+                        background: '#fee2e2',
+                        border: '2px solid #ef4444',
+                        borderRadius: '18px',
+                        padding: '20px',
+                        marginBottom: '20px'
+                    }}
+                >
+                    <h3 style={{
+                        margin: '0 0 10px',
+                        color: '#dc2626'
+                    }}>
+                        🚨 Emergency Fraud Help
+                    </h3>
 
+                    <p>
+                        Lost money due to fraud?
+                        Immediately contact cybercrime helpline.
+                    </p>
+
+                    <div style={{
+                        display: 'flex',
+                        gap: '12px'
+                    }}>
+                        <a
+                            href="tel:1930"
+                            style={{
+                                background: '#ef4444',
+                                color: 'white',
+                                padding: '10px 20px',
+                                borderRadius: '10px',
+                                textDecoration: 'none'
+                            }}
+                        >
+                            📞 Call 1930
+                        </a>
+
+                        <Link
+                            to="/assistance"
+                            style={{
+                                background: '#2563eb',
+                                color: 'white',
+                                padding: '10px 20px',
+                                borderRadius: '10px',
+                                textDecoration: 'none'
+                            }}
+                        >
+                            Get Help
+                        </Link>
+                    </div>
+                </div>
+                <div style={{
+                    ...c.card,
+                    marginBottom: '20px'
+                }}>
+                    <h3>📊 Security Insights</h3>
+
+                    <div style={{
+                        display: 'flex',
+                        justifyContent: 'space-between',
+                        marginTop: '15px'
+                    }}>
+                        <div>
+                            🔴 Fraud Cases: {fraudCount}
+                        </div>
+
+                        <div>
+                            🟢 Safe Transactions: {safeCount}
+                        </div>
+
+                        <div>
+                            💰 Amount At Risk:
+                            ₹{fraudAmount.toLocaleString('en-IN')}
+                        </div>
+                    </div>
+                </div>
                 {/* Transaction History */}
                 <div style={c.card}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>

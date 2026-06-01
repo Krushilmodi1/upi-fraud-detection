@@ -1,23 +1,34 @@
-const Complaint = require('../models/complaint');
+const Complaint = require("../models/complaint");
 
 const submitComplaint = async (req, res) => {
     try {
         const { subject, category, description, transactionId, amount } = req.body;
 
         // Auto-priority logic
-        let priority = 'low';
-        let autoStatus = 'pending';
-        const desc = (description || '').toLowerCase();
-        const subj = (subject || '').toLowerCase();
+        let priority = "low";
+        let autoStatus = "pending";
+        const desc = (description || "").toLowerCase();
+        const subj = (subject || "").toLowerCase();
 
-        const criticalKeywords = ['scam', 'hacked', 'stolen', 'fraud', 'lost money', 'cheated', 'blocked', 'unauthorized'];
-        const isCritical = criticalKeywords.some(k => desc.includes(k) || subj.includes(k));
+        const criticalKeywords = [
+            "scam",
+            "hacked",
+            "stolen",
+            "fraud",
+            "lost money",
+            "cheated",
+            "blocked",
+            "unauthorized",
+        ];
+        const isCritical = criticalKeywords.some(
+            (k) => desc.includes(k) || subj.includes(k),
+        );
 
-        if (amount > 50000 || isCritical || category === 'fraud') {
-            priority = 'high';
-            autoStatus = 'reviewing'; // auto move to reviewing for critical
-        } else if (amount > 5000 || category === 'dispute') {
-            priority = 'medium';
+        if (amount > 50000 || isCritical || category === "fraud") {
+            priority = "high";
+            autoStatus = "reviewing"; // auto move to reviewing for critical
+        } else if (amount > 5000 || category === "dispute") {
+            priority = "medium";
         }
 
         const complaint = await Complaint.create({
@@ -27,30 +38,175 @@ const submitComplaint = async (req, res) => {
             subject,
             category,
             description,
-            transactionId: transactionId || '',
+            transactionId: transactionId || "",
             amount: amount || 0,
             priority,
-            status: autoStatus
+            status: autoStatus,
         });
 
         // Auto-reply for low priority / non-critical
-        if (priority === 'low' && category !== 'fraud') {
-            complaint.adminReply = `Thank you for contacting UPI FraudGuard support. Your complaint has been received and logged.\n\nFor general UPI issues:\n• If money is deducted but not received, wait 48 hours for auto-reversal\n• Contact your bank with UTR number if not resolved\n• Call NPCI helpline: 1800-120-1740\n\nFor urgent fraud issues call 1930 immediately.\n\nYour complaint ID: ${complaint._id}\nWe will follow up within 2 business days.`;
-            complaint.status = 'resolved';
+        if (priority === "low" && category !== "fraud") {
+
+            const text = `${subject} ${description}`.toLowerCase();
+
+            let aiReply = `Hello ${req.user.name},
+
+Thank you for contacting FraudGuard.
+
+After reviewing your complaint, here is our assessment:
+
+`;
+
+            let matched = false;
+
+            // Money Deducted
+            if (
+                text.includes("money deducted") ||
+                text.includes("amount deducted") ||
+                text.includes("debited") ||
+                text.includes("payment deducted")
+            ) {
+                matched = true;
+
+                aiReply += `
+💳 Money Deducted Issue Detected
+
+Recommended Actions:
+• Wait 24-48 hours for auto reversal
+• Check transaction status
+• Keep your UTR number safe
+• Contact your bank if not refunded
+
+`;
+            }
+
+            // UPI Problems
+            if (
+                text.includes("upi") ||
+                text.includes("upi id") ||
+                text.includes("payment failed")
+            ) {
+                matched = true;
+
+                aiReply += `
+📱 UPI Related Issue Detected
+
+Recommended Actions:
+• Verify UPI ID carefully
+• Update your banking app
+• Check bank server availability
+• Retry after some time
+
+`;
+            }
+
+            // Wrong Transfer
+            if (
+                text.includes("wrong transfer") ||
+                text.includes("sent to wrong") ||
+                text.includes("wrong account")
+            ) {
+                matched = true;
+
+                aiReply += `
+⚠️ Wrong Transfer Issue Detected
+
+Recommended Actions:
+• Contact your bank immediately
+• Raise a dispute request
+• Keep screenshots as evidence
+• Save payment proof
+
+`;
+            }
+
+            // Refund Issues
+            if (
+                text.includes("refund") ||
+                text.includes("cashback") ||
+                text.includes("money back")
+            ) {
+                matched = true;
+
+                aiReply += `
+💰 Refund Related Issue Detected
+
+Recommended Actions:
+• Check merchant refund timelines
+• Contact merchant support
+• Monitor bank statement
+
+`;
+            }
+
+            // Dispute
+            if (category === "dispute") {
+                matched = true;
+
+                aiReply += `
+📋 Dispute Complaint Detected
+
+Recommended Actions:
+• Preserve all screenshots
+• Save payment records
+• Contact your bank immediately
+
+`;
+            }
+
+            // High Amount Warning
+            if (amount > 10000) {
+                aiReply += `
+🚨 Important Notice
+
+The reported amount is ₹${amount}.
+
+We recommend contacting your bank immediately and monitoring account activity closely.
+
+`;
+            }
+
+            // Default Reply
+            if (!matched) {
+                aiReply += `
+We have successfully recorded your complaint.
+
+General Safety Recommendations:
+• Never share OTPs
+• Never share UPI PINs
+• Verify receiver details before payment
+• Call 1930 for urgent fraud issues
+
+`;
+            }
+
+            aiReply += `
+Complaint ID: ${complaint._id}
+
+This response was generated automatically based on the complaint details you provided.
+
+Regards,
+FraudGuard Smart Assistant
+`;
+
+            complaint.adminReply = aiReply;
+            complaint.status = "resolved";
             complaint.repliedAt = new Date();
-            complaint.repliedBy = 'FraudGuard Auto-Support';
+            complaint.repliedBy = "FraudGuard Smart Assistant";
+
             await complaint.save();
         }
 
         res.status(201).json({
             success: true,
             data: complaint,
-            autoResolved: priority === 'low' && category !== 'fraud',
-            message: priority === 'high'
-                ? 'Critical complaint flagged. Admin will respond urgently.'
-                : priority === 'low' && category !== 'fraud'
-                ? 'Auto-resolved with guidance. Check your complaint for details.'
-                : 'Complaint submitted. Admin will review shortly.'
+            autoResolved: priority === "low" && category !== "fraud",
+            message:
+                priority === "high"
+                    ? "Critical complaint flagged. Admin will respond urgently."
+                    : priority === "low" && category !== "fraud"
+                        ? "Auto-resolved with guidance. Check your complaint for details."
+                        : "Complaint submitted. Admin will review shortly.",
         });
     } catch (error) {
         res.status(500).json({ success: false, error: error.message });
@@ -58,8 +214,9 @@ const submitComplaint = async (req, res) => {
 };
 const getMyComplaints = async (req, res) => {
     try {
-        const complaints = await Complaint.find({ userId: req.user._id })
-            .sort({ createdAt: -1 });
+        const complaints = await Complaint.find({ userId: req.user._id }).sort({
+            createdAt: -1,
+        });
         res.json({ success: true, data: complaints });
     } catch (error) {
         res.status(500).json({ success: false, error: error.message });
@@ -71,8 +228,7 @@ const getAllComplaints = async (req, res) => {
         const filter = {};
         if (req.query.status) filter.status = req.query.status;
         if (req.query.priority) filter.priority = req.query.priority;
-        const complaints = await Complaint.find(filter)
-            .sort({ createdAt: -1 });
+        const complaints = await Complaint.find(filter).sort({ createdAt: -1 });
         res.json({ success: true, data: complaints });
     } catch (error) {
         res.status(500).json({ success: false, error: error.message });
@@ -86,14 +242,16 @@ const replyComplaint = async (req, res) => {
             req.params.id,
             {
                 adminReply: reply,
-                status: status || 'resolved',
+                status: status || "resolved",
                 repliedAt: new Date(),
-                repliedBy: req.user.name
+                repliedBy: req.user.name,
             },
-            { new: true }
+            { new: true },
         );
         if (!complaint) {
-            return res.status(404).json({ success: false, error: 'Complaint not found' });
+            return res
+                .status(404)
+                .json({ success: false, error: "Complaint not found" });
         }
         res.json({ success: true, data: complaint });
     } catch (error) {
@@ -106,7 +264,7 @@ const updateStatus = async (req, res) => {
         const complaint = await Complaint.findByIdAndUpdate(
             req.params.id,
             { status: req.body.status },
-            { new: true }
+            { new: true },
         );
         res.json({ success: true, data: complaint });
     } catch (error) {
@@ -119,5 +277,5 @@ module.exports = {
     getMyComplaints,
     getAllComplaints,
     replyComplaint,
-    updateStatus
+    updateStatus,
 };
