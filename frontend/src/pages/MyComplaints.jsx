@@ -44,25 +44,32 @@ const MyComplaints = () => {
         }
     };
 
-    const handleSubmit = async (e) => {
-        e.preventDefault();
-        setSubmitting(true);
-        try {
-            await API.post('/complaints', {
-                ...form,
-                amount: parseFloat(form.amount) || 0
-            });
-            toast.success('Complaint submitted successfully!');
-            setShowForm(false);
-            setForm({ subject: '', category: 'fraud', description: '', transactionId: '', amount: '' });
-            fetchComplaints();
-        } catch (err) {
-            toast.error('Failed to submit complaint');
-        } finally {
-            setSubmitting(false);
+const handleSubmit = async (e) => {
+    e.preventDefault();
+    setSubmitting(true);
+    try {
+        const res = await API.post('/complaints', {
+            ...form,
+            amount: parseFloat(form.amount) || 0
+        });
+        
+        if (res.data.autoResolved) {
+            toast.success('✅ Auto-resolved! Check your complaint for guidance.');
+        } else if (res.data.data.priority === 'high') {
+            toast.success('🚨 Critical complaint flagged to admin urgently!');
+        } else {
+            toast.success('📋 Complaint submitted. Admin will review shortly.');
         }
-    };
-
+        
+        setShowForm(false);
+        setForm({ subject: '', category: 'fraud', description: '', transactionId: '', amount: '' });
+        fetchComplaints();
+    } catch (err) {
+        toast.error('Failed to submit complaint');
+    } finally {
+        setSubmitting(false);
+    }
+};
     const s = {
         page: { minHeight: '100vh', background: '#030712', color: 'white', padding: '24px' },
         card: { background: '#0d1117', border: '1px solid #1f2937', borderRadius: '16px', padding: '20px' },

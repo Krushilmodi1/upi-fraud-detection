@@ -1,355 +1,322 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import API from '../api/axios';
 import { useAuth } from '../context/AuthContext';
-
-const AnimatedNumber = ({ value, duration = 1000 }) => {
-    const [display, setDisplay] = useState(0);
-    useEffect(() => {
-        let start = 0;
-        const step = value / (duration / 16);
-        const timer = setInterval(() => {
-            start += step;
-            if (start >= value) { setDisplay(value); clearInterval(timer); }
-            else setDisplay(Math.floor(start));
-        }, 16);
-        return () => clearInterval(timer);
-    }, [value]);
-    return <span>{display}</span>;
-};
-
-const RiskMeter = ({ score }) => {
-    const color = score >= 70 ? '#ef4444' : score >= 30 ? '#f59e0b' : '#22c55e';
-    const rotation = -90 + (score / 100) * 180;
-    return (
-        <div style={{ textAlign: 'center', padding: '10px 0' }}>
-            <svg width="160" height="90" viewBox="0 0 160 90">
-                <path d="M 10 80 A 70 70 0 0 1 150 80" fill="none" stroke="#1f2937" strokeWidth="12" strokeLinecap="round" />
-                <path d="M 10 80 A 70 70 0 0 1 150 80" fill="none" stroke={color} strokeWidth="12" strokeLinecap="round"
-                    strokeDasharray={`${(score / 100) * 220} 220`} />
-                <g transform={`rotate(${rotation}, 80, 80)`}>
-                    <line x1="80" y1="80" x2="80" y2="20" stroke="white" strokeWidth="2" strokeLinecap="round" />
-                    <circle cx="80" cy="80" r="5" fill="white" />
-                </g>
-                <text x="80" y="75" textAnchor="middle" fill={color} fontSize="22" fontWeight="bold">{score}</text>
-            </svg>
-            <div style={{ color: color, fontWeight: 600, fontSize: '14px', marginTop: '-10px' }}>
-                {score >= 70 ? '🔴 High Risk' : score >= 30 ? '🟡 Medium Risk' : '🟢 Low Risk'}
-            </div>
-        </div>
-    );
-};
-
-const SecurityScore = ({ transactions }) => {
-    const fraud = transactions.filter(t => t.isFraud).length;
-    const total = transactions.length;
-    const score = total === 0 ? 100 : Math.max(0, Math.round(100 - (fraud / total) * 100));
-    const color = score >= 80 ? '#22c55e' : score >= 50 ? '#f59e0b' : '#ef4444';
-    const label = score >= 80 ? 'Excellent' : score >= 50 ? 'Fair' : 'At Risk';
-    return (
-        <div style={{ textAlign: 'center' }}>
-            <div style={{ position: 'relative', width: '120px', height: '120px', margin: '0 auto' }}>
-                <svg width="120" height="120" viewBox="0 0 120 120">
-                    <circle cx="60" cy="60" r="50" fill="none" stroke="#1f2937" strokeWidth="10" />
-                    <circle cx="60" cy="60" r="50" fill="none" stroke={color} strokeWidth="10"
-                        strokeDasharray={`${(score / 100) * 314} 314`}
-                        strokeLinecap="round"
-                        transform="rotate(-90 60 60)" />
-                </svg>
-                <div style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%,-50%)', textAlign: 'center' }}>
-                    <div style={{ fontSize: '24px', fontWeight: 700, color }}>{score}</div>
-                    <div style={{ fontSize: '10px', color: '#9ca3af' }}>/ 100</div>
-                </div>
-            </div>
-            <div style={{ color, fontWeight: 600, marginTop: '8px', fontSize: '14px' }}>{label}</div>
-            <div style={{ color: '#9ca3af', fontSize: '12px' }}>Security Score</div>
-        </div>
-    );
-};
-
-const MiniBarChart = ({ transactions }) => {
-    if (transactions.length === 0) return <div style={{ color: '#6b7280', fontSize: '13px', textAlign: 'center', padding: '20px' }}>No data yet</div>;
-    const last7 = Array.from({ length: 7 }, (_, i) => {
-        const d = new Date();
-        d.setDate(d.getDate() - (6 - i));
-        const dateStr = d.toLocaleDateString('en-IN', { weekday: 'short' });
-        const dayTx = transactions.filter(t => new Date(t.createdAt).toDateString() === d.toDateString());
-        return { label: dateStr, total: dayTx.length, fraud: dayTx.filter(t => t.isFraud).length };
-    });
-    const max = Math.max(...last7.map(d => d.total), 1);
-    return (
-        <div style={{ display: 'flex', alignItems: 'flex-end', gap: '8px', height: '80px', padding: '0 4px' }}>
-            {last7.map((d, i) => (
-                <div key={i} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px' }}>
-                    <div style={{ width: '100%', display: 'flex', flexDirection: 'column', justifyContent: 'flex-end', height: '60px', gap: '2px' }}>
-                        {d.fraud > 0 && <div style={{ width: '100%', height: `${(d.fraud / max) * 60}px`, background: '#ef4444', borderRadius: '3px 3px 0 0' }} />}
-                        {d.total - d.fraud > 0 && <div style={{ width: '100%', height: `${((d.total - d.fraud) / max) * 60}px`, background: '#3b82f6', borderRadius: d.fraud === 0 ? '3px 3px 0 0' : '0' }} />}
-                    </div>
-                    <div style={{ fontSize: '10px', color: '#6b7280' }}>{d.label}</div>
-                </div>
-            ))}
-        </div>
-    );
-};
+import { useTheme } from '../context/ThemeContext';
+import {
+    AreaChart, Area, PieChart, Pie, Cell,
+    ResponsiveContainer, Tooltip, XAxis, YAxis
+} from 'recharts';
 
 const Dashboard = () => {
     const { user } = useAuth();
+    const { isDark } = useTheme();
     const [transactions, setTransactions] = useState([]);
     const [loading, setLoading] = useState(true);
-    const [selected, setSelected] = useState(null);
     const [activeTab, setActiveTab] = useState('all');
+    const [expanded, setExpanded] = useState(null);
 
     useEffect(() => {
-        API.get('/transactions/my').then(res => {
-            setTransactions(res.data.data);
-        }).catch(console.error).finally(() => setLoading(false));
+        API.get('/transactions/my')
+            .then(res => setTransactions(res.data.data))
+            .catch(console.error)
+            .finally(() => setLoading(false));
     }, []);
 
     const fraudCount = transactions.filter(t => t.isFraud).length;
     const safeCount = transactions.length - fraudCount;
-    const totalAmount = transactions.reduce((sum, t) => sum + t.amount, 0);
-    const fraudAmount = transactions.filter(t => t.isFraud).reduce((sum, t) => sum + t.amount, 0);
-    const avgRiskScore = transactions.length > 0
-        ? Math.round(transactions.reduce((sum, t) => sum + t.riskScore, 0) / transactions.length) : 0;
+    const fraudAmount = transactions.filter(t => t.isFraud).reduce((s, t) => s + t.amount, 0);
+    const avgRisk = transactions.length > 0
+        ? Math.round(transactions.reduce((s, t) => s + t.riskScore, 0) / transactions.length) : 0;
+    const secScore = transactions.length === 0 ? 100
+        : Math.max(0, Math.round(100 - (fraudCount / transactions.length) * 100));
+
+    const pieData = [
+        { name: 'Safe', value: safeCount || 1 },
+        { name: 'Fraud', value: fraudCount }
+    ];
+
+    const trendData = Array.from({ length: 7 }, (_, i) => {
+        const d = new Date(); d.setDate(d.getDate() - (6 - i));
+        const day = transactions.filter(t => new Date(t.createdAt).toDateString() === d.toDateString());
+        return {
+            day: d.toLocaleDateString('en-IN', { weekday: 'short' }),
+            safe: day.filter(t => !t.isFraud).length,
+            fraud: day.filter(t => t.isFraud).length
+        };
+    });
 
     const filtered = activeTab === 'fraud' ? transactions.filter(t => t.isFraud)
         : activeTab === 'safe' ? transactions.filter(t => !t.isFraud)
         : transactions;
 
-    const tierBadge = (tier) => {
-        const styles = {
-            High: { background: '#7f1d1d', color: '#fca5a5', border: '1px solid #dc2626' },
-            Medium: { background: '#78350f', color: '#fcd34d', border: '1px solid #d97706' },
-            Low: { background: '#14532d', color: '#86efac', border: '1px solid #16a34a' }
-        };
-        return <span style={{ ...styles[tier], padding: '2px 10px', borderRadius: '20px', fontSize: '11px', fontWeight: 600 }}>{tier}</span>;
+    const c = {
+        page: { minHeight: '100vh', background: 'var(--bg-secondary)', padding: '24px' },
+        card: { background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: '16px', padding: '20px', boxShadow: 'var(--shadow)' },
+        label: { fontSize: '12px', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '4px' },
+        val: (color = 'var(--text-primary)') => ({ fontSize: '32px', fontWeight: 800, color, lineHeight: 1 }),
+        sub: { fontSize: '12px', color: 'var(--text-muted)', marginTop: '4px' },
+        badge: (fraud) => ({
+            display: 'inline-flex', alignItems: 'center', gap: '4px',
+            padding: '3px 10px', borderRadius: '20px', fontSize: '12px', fontWeight: 600,
+            background: fraud ? 'var(--danger-light)' : 'var(--success-light)',
+            color: fraud ? 'var(--danger)' : 'var(--success)',
+            border: `1px solid ${fraud ? 'var(--danger)' : 'var(--success)'}44`
+        }),
+        tierBadge: (tier) => {
+            const cfg = { High: ['var(--danger-light)', 'var(--danger)'], Medium: ['var(--warning-light)', 'var(--warning)'], Low: ['var(--success-light)', 'var(--success)'] };
+            return { padding: '2px 10px', borderRadius: '20px', fontSize: '11px', fontWeight: 600, background: cfg[tier]?.[0], color: cfg[tier]?.[1] };
+        },
+        tabBtn: (active, color = 'var(--accent)') => ({
+            padding: '7px 16px', borderRadius: '20px', border: 'none', cursor: 'pointer',
+            fontSize: '13px', fontWeight: 600, transition: 'all 0.15s',
+            background: active ? color : 'transparent',
+            color: active ? 'white' : 'var(--text-muted)'
+        }),
+        quickAction: {
+            background: 'var(--bg-card)', border: '1px solid var(--border)',
+            borderRadius: '14px', padding: '18px', textDecoration: 'none',
+            display: 'flex', flexDirection: 'column', gap: '8px',
+            transition: 'all 0.15s', boxShadow: 'var(--shadow)',
+            cursor: 'pointer'
+        }
     };
 
     if (loading) return (
-        <div style={{ minHeight: '100vh', background: '#030712', display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column', gap: '16px' }}>
-            <div style={{ width: '48px', height: '48px', border: '3px solid #1f2937', borderTop: '3px solid #3b82f6', borderRadius: '50%', animation: 'spin 1s linear infinite' }} />
-            <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
-            <div style={{ color: '#6b7280' }}>Loading your dashboard...</div>
+        <div style={{ ...c.page, display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column', gap: '12px' }}>
+            <div style={{ width: '40px', height: '40px', border: '3px solid var(--border)', borderTop: `3px solid var(--accent)`, borderRadius: '50%', animation: 'spin 1s linear infinite' }} />
+            <style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>
+            <span style={{ color: 'var(--text-muted)', fontSize: '14px' }}>Loading your dashboard...</span>
         </div>
     );
 
     return (
-        <div style={{ minHeight: '100vh', background: '#030712', color: 'white', padding: '24px' }}>
+        <div style={c.page}>
             <style>{`
-                @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
-                .fade-in { animation: fadeIn 0.4s ease forwards; }
-                .card { background: #0d1117; border: 1px solid #1f2937; border-radius: 16px; padding: 20px; }
-                .hover-card:hover { border-color: #3b82f6; transform: translateY(-2px); transition: all 0.2s; cursor: pointer; }
-                .tab-btn { padding: 6px 16px; border-radius: 20px; border: none; cursor: pointer; font-size: 13px; font-weight: 500; transition: all 0.2s; }
-                .stat-card { background: #0d1117; border: 1px solid #1f2937; border-radius: 16px; padding: 20px; }
+                .qa:hover { border-color: var(--accent) !important; transform: translateY(-2px); box-shadow: var(--shadow-md) !important; }
+                .tx-row:hover { background: var(--bg-hover) !important; }
+                @keyframes fadeUp { from{opacity:0;transform:translateY(8px)} to{opacity:1;transform:translateY(0)} }
+                .fade { animation: fadeUp 0.3s ease forwards; }
             `}</style>
 
-            <div className="fade-in">
+            <div className="fade" style={{ maxWidth: '1200px', margin: '0 auto' }}>
+
                 {/* Header */}
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '28px' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '24px' }}>
                     <div>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '4px' }}>
-                            <div style={{ width: '44px', height: '44px', borderRadius: '50%', background: 'linear-gradient(135deg, #3b82f6, #8b5cf6)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '18px', fontWeight: 700 }}>
-                                {user?.name?.charAt(0).toUpperCase()}
-                            </div>
-                            <div>
-                                <h1 style={{ fontSize: '22px', fontWeight: 700, margin: 0 }}>Welcome back, {user?.name} 👋</h1>
-                                <p style={{ color: '#6b7280', fontSize: '13px', margin: 0 }}>Here's your fraud protection overview</p>
-                            </div>
-                        </div>
+                        <h1 style={{ fontSize: '24px', fontWeight: 800, color: 'var(--text-primary)', margin: '0 0 4px' }}>
+                            Welcome back, {user?.name} 👋
+                        </h1>
+                        <p style={{ color: 'var(--text-muted)', fontSize: '14px', margin: 0 }}>
+                            Your personal fraud protection dashboard
+                        </p>
                     </div>
                     <div style={{ display: 'flex', gap: '10px' }}>
-                        <Link to="/detect" style={{ background: '#2563eb', color: 'white', padding: '10px 20px', borderRadius: '10px', textDecoration: 'none', fontSize: '14px', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '6px' }}>
+                        <Link to="/detect" style={{ background: 'var(--accent)', color: 'white', padding: '10px 18px', borderRadius: '10px', textDecoration: 'none', fontSize: '14px', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '6px' }}>
                             🔍 Analyze Transaction
                         </Link>
-                        <Link to="/upi-scanner" style={{ background: '#1f2937', color: 'white', padding: '10px 20px', borderRadius: '10px', textDecoration: 'none', fontSize: '14px', fontWeight: 600 }}>
-                            🔎 UPI Scanner
+                        <Link to="/complaints" style={{ background: 'var(--bg-card)', color: 'var(--text-primary)', padding: '10px 18px', borderRadius: '10px', textDecoration: 'none', fontSize: '14px', fontWeight: 600, border: '1px solid var(--border)' }}>
+                            📋 My Complaints
                         </Link>
                     </div>
                 </div>
 
-                {/* Alert Banner - show if fraud detected */}
+                {/* Fraud Alert */}
                 {fraudCount > 0 && (
-                    <div style={{ background: '#450a0a', border: '1px solid #dc2626', borderRadius: '12px', padding: '14px 20px', marginBottom: '24px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                            <span style={{ fontSize: '24px' }}>🚨</span>
+                    <div style={{ background: 'var(--danger-light)', border: '1px solid var(--danger)', borderRadius: '12px', padding: '14px 18px', marginBottom: '20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                            <span style={{ fontSize: '22px' }}>🚨</span>
                             <div>
-                                <div style={{ fontWeight: 600, color: '#fca5a5' }}>{fraudCount} Fraudulent Transaction{fraudCount > 1 ? 's' : ''} Detected</div>
-                                <div style={{ fontSize: '13px', color: '#f87171' }}>Review your recent transactions and take action immediately</div>
+                                <div style={{ fontWeight: 700, color: 'var(--danger)', fontSize: '14px' }}>{fraudCount} Fraudulent Transaction{fraudCount > 1 ? 's' : ''} Detected</div>
+                                <div style={{ fontSize: '13px', color: 'var(--text-secondary)' }}>Take action immediately to protect your account</div>
                             </div>
                         </div>
-                        <Link to="/assistance" style={{ background: '#dc2626', color: 'white', padding: '8px 16px', borderRadius: '8px', textDecoration: 'none', fontSize: '13px', fontWeight: 600 }}>
+                        <Link to="/assistance" style={{ background: 'var(--danger)', color: 'white', padding: '8px 14px', borderRadius: '8px', textDecoration: 'none', fontSize: '13px', fontWeight: 600 }}>
                             Get Help →
                         </Link>
                     </div>
                 )}
 
                 {/* Stats Row */}
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '16px', marginBottom: '24px' }}>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '16px', marginBottom: '20px' }}>
                     {[
-                        { icon: '💳', label: 'Total Analyzed', value: transactions.length, sub: 'transactions', color: '#3b82f6' },
-                        { icon: '🚨', label: 'Fraud Detected', value: fraudCount, sub: `₹${fraudAmount.toLocaleString('en-IN')} at risk`, color: '#ef4444' },
-                        { icon: '✅', label: 'Safe Transactions', value: safeCount, sub: 'verified clean', color: '#22c55e' },
-                        { icon: '📊', label: 'Avg Risk Score', value: avgRiskScore, sub: 'out of 100', color: avgRiskScore >= 70 ? '#ef4444' : avgRiskScore >= 30 ? '#f59e0b' : '#22c55e' }
+                        { label: 'Total Analyzed', value: transactions.length, color: 'var(--accent)', sub: 'transactions', icon: '💳' },
+                        { label: 'Fraud Detected', value: fraudCount, color: 'var(--danger)', sub: `₹${fraudAmount.toLocaleString('en-IN')} at risk`, icon: '🚨' },
+                        { label: 'Safe Transactions', value: safeCount, color: 'var(--success)', sub: 'verified clean', icon: '✅' },
+                        { label: 'Security Score', value: `${secScore}/100`, color: secScore >= 80 ? 'var(--success)' : secScore >= 50 ? 'var(--warning)' : 'var(--danger)', sub: secScore >= 80 ? 'Excellent' : secScore >= 50 ? 'Fair' : 'At Risk', icon: '🛡️' }
                     ].map((s, i) => (
-                        <div key={i} className="stat-card">
-                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                        <div key={i} style={c.card}>
+                            <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                                 <div>
-                                    <div style={{ fontSize: '12px', color: '#6b7280', marginBottom: '6px' }}>{s.label}</div>
-                                    <div style={{ fontSize: '32px', fontWeight: 700, color: s.color, lineHeight: 1 }}>
-                                        <AnimatedNumber value={s.value} />
-                                    </div>
-                                    <div style={{ fontSize: '12px', color: '#4b5563', marginTop: '4px' }}>{s.sub}</div>
+                                    <div style={c.label}>{s.label}</div>
+                                    <div style={c.val(s.color)}>{s.value}</div>
+                                    <div style={c.sub}>{s.sub}</div>
                                 </div>
-                                <div style={{ fontSize: '28px' }}>{s.icon}</div>
+                                <span style={{ fontSize: '28px', opacity: 0.7 }}>{s.icon}</span>
                             </div>
                         </div>
                     ))}
                 </div>
 
-                {/* Middle Row */}
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '16px', marginBottom: '24px' }}>
-                    {/* Security Score */}
-                    <div className="card" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
-                        <div style={{ fontSize: '13px', color: '#6b7280', marginBottom: '12px', fontWeight: 500 }}>🛡️ Your Security Score</div>
-                        <SecurityScore transactions={transactions} />
-                        <div style={{ marginTop: '12px', fontSize: '12px', color: '#4b5563', textAlign: 'center' }}>
-                            Based on your transaction history
+                {/* Charts Row */}
+                <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '16px', marginBottom: '20px' }}>
+                    <div style={c.card}>
+                        <div style={{ fontSize: '14px', fontWeight: 600, color: 'var(--text-primary)', marginBottom: '16px' }}>
+                            📈 7-Day Transaction Activity
                         </div>
+                        <ResponsiveContainer width="100%" height={180}>
+                            <AreaChart data={trendData}>
+                                <defs>
+                                    <linearGradient id="safeGrad" x1="0" y1="0" x2="0" y2="1">
+                                        <stop offset="5%" stopColor="#22c55e" stopOpacity={0.3} />
+                                        <stop offset="95%" stopColor="#22c55e" stopOpacity={0} />
+                                    </linearGradient>
+                                    <linearGradient id="fraudGrad" x1="0" y1="0" x2="0" y2="1">
+                                        <stop offset="5%" stopColor="#ef4444" stopOpacity={0.3} />
+                                        <stop offset="95%" stopColor="#ef4444" stopOpacity={0} />
+                                    </linearGradient>
+                                </defs>
+                                <XAxis dataKey="day" tick={{ fontSize: 11, fill: 'var(--text-muted)' }} axisLine={false} tickLine={false} />
+                                <YAxis tick={{ fontSize: 11, fill: 'var(--text-muted)' }} axisLine={false} tickLine={false} />
+                                <Tooltip contentStyle={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: '10px', color: 'var(--text-primary)' }} />
+                                <Area type="monotone" dataKey="safe" stroke="#22c55e" fill="url(#safeGrad)" strokeWidth={2} name="Safe" />
+                                <Area type="monotone" dataKey="fraud" stroke="#ef4444" fill="url(#fraudGrad)" strokeWidth={2} name="Fraud" />
+                            </AreaChart>
+                        </ResponsiveContainer>
                     </div>
 
-                    {/* Average Risk Meter */}
-                    <div className="card" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
-                        <div style={{ fontSize: '13px', color: '#6b7280', marginBottom: '8px', fontWeight: 500 }}>⚡ Average Risk Meter</div>
-                        <RiskMeter score={avgRiskScore} />
-                        <div style={{ marginTop: '8px', fontSize: '12px', color: '#4b5563', textAlign: 'center' }}>
-                            Across all your transactions
+                    <div style={c.card}>
+                        <div style={{ fontSize: '14px', fontWeight: 600, color: 'var(--text-primary)', marginBottom: '8px' }}>
+                            🥧 Fraud vs Safe
                         </div>
-                    </div>
-
-                    {/* 7 day activity */}
-                    <div className="card">
-                        <div style={{ fontSize: '13px', color: '#6b7280', marginBottom: '12px', fontWeight: 500 }}>📅 Last 7 Days Activity</div>
-                        <MiniBarChart transactions={transactions} />
-                        <div style={{ display: 'flex', gap: '12px', marginTop: '10px', justifyContent: 'center' }}>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '11px', color: '#6b7280' }}>
-                                <div style={{ width: '8px', height: '8px', background: '#3b82f6', borderRadius: '2px' }} /> Safe
-                            </div>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '11px', color: '#6b7280' }}>
-                                <div style={{ width: '8px', height: '8px', background: '#ef4444', borderRadius: '2px' }} /> Fraud
-                            </div>
+                        <ResponsiveContainer width="100%" height={140}>
+                            <PieChart>
+                                <Pie data={pieData} cx="50%" cy="50%" innerRadius={45} outerRadius={65} dataKey="value" paddingAngle={3}>
+                                    <Cell fill="#22c55e" />
+                                    <Cell fill="#ef4444" />
+                                </Pie>
+                                <Tooltip contentStyle={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: '10px', color: 'var(--text-primary)' }} />
+                            </PieChart>
+                        </ResponsiveContainer>
+                        <div style={{ display: 'flex', justifyContent: 'center', gap: '16px', marginTop: '4px' }}>
+                            {[['#22c55e', 'Safe', safeCount], ['#ef4444', 'Fraud', fraudCount]].map(([col, label, val]) => (
+                                <div key={label} style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
+                                    <div style={{ width: '10px', height: '10px', borderRadius: '3px', background: col }} />
+                                    <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>{label}: <strong style={{ color: 'var(--text-primary)' }}>{val}</strong></span>
+                                </div>
+                            ))}
                         </div>
                     </div>
                 </div>
 
                 {/* Quick Actions */}
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '12px', marginBottom: '24px' }}>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: '12px', marginBottom: '20px' }}>
                     {[
-                        { icon: '🔍', label: 'Detect Fraud', desc: 'Analyze a transaction', link: '/detect', color: '#1d4ed8' },
-                        { icon: '🔎', label: 'UPI Scanner', desc: 'Check UPI ID safety', link: '/upi-scanner', color: '#7c3aed' },
-                        { icon: '🆘', label: 'Dispute Help', desc: 'Money not received?', link: '/dispute', color: '#b45309' },
-                        { icon: '📞', label: 'Assistance', desc: 'Recovery steps', link: '/assistance', color: '#065f46' }
+                        { icon: '🔍', label: 'Detect Fraud', desc: 'Analyze transaction', to: '/detect' },
+                        { icon: '🔎', label: 'UPI Scanner', desc: 'Check UPI ID', to: '/upi-scanner' },
+                        { icon: '🆘', label: 'Dispute Help', desc: 'Money issues', to: '/dispute' },
+                        { icon: '📋', label: 'My Complaints', desc: 'Track issues', to: '/complaints' },
+                        { icon: '📞', label: 'Assistance', desc: 'Recovery steps', to: '/assistance' },
                     ].map((a, i) => (
-                        <Link key={i} to={a.link} style={{ textDecoration: 'none' }}>
-                            <div className="hover-card" style={{ background: '#0d1117', border: '1px solid #1f2937', borderRadius: '12px', padding: '16px', transition: 'all 0.2s' }}>
-                                <div style={{ fontSize: '28px', marginBottom: '8px' }}>{a.icon}</div>
-                                <div style={{ fontWeight: 600, fontSize: '14px', color: 'white', marginBottom: '2px' }}>{a.label}</div>
-                                <div style={{ fontSize: '12px', color: '#6b7280' }}>{a.desc}</div>
+                        <Link key={i} to={a.to} style={{ textDecoration: 'none' }}>
+                            <div className="qa" style={c.quickAction}>
+                                <span style={{ fontSize: '26px' }}>{a.icon}</span>
+                                <div>
+                                    <div style={{ fontWeight: 600, fontSize: '13px', color: 'var(--text-primary)' }}>{a.label}</div>
+                                    <div style={{ fontSize: '12px', color: 'var(--text-muted)' }}>{a.desc}</div>
+                                </div>
                             </div>
                         </Link>
                     ))}
                 </div>
 
                 {/* Transaction History */}
-                <div className="card">
+                <div style={c.card}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
-                        <h2 style={{ fontSize: '16px', fontWeight: 600, margin: 0 }}>📋 Transaction History</h2>
-                        <div style={{ display: 'flex', gap: '6px', background: '#111827', padding: '4px', borderRadius: '24px' }}>
-                            {['all', 'fraud', 'safe'].map(tab => (
-                                <button key={tab} className="tab-btn" onClick={() => setActiveTab(tab)}
-                                    style={{
-                                        background: activeTab === tab ? (tab === 'fraud' ? '#dc2626' : tab === 'safe' ? '#16a34a' : '#2563eb') : 'transparent',
-                                        color: activeTab === tab ? 'white' : '#6b7280'
-                                    }}>
-                                    {tab === 'all' ? `All (${transactions.length})` : tab === 'fraud' ? `🚨 Fraud (${fraudCount})` : `✅ Safe (${safeCount})`}
+                        <h2 style={{ fontSize: '15px', fontWeight: 700, margin: 0, color: 'var(--text-primary)' }}>
+                            📋 Transaction History
+                        </h2>
+                        <div style={{ display: 'flex', gap: '4px', background: 'var(--bg-secondary)', padding: '4px', borderRadius: '24px' }}>
+                            {[
+                                { id: 'all', label: `All (${transactions.length})` },
+                                { id: 'fraud', label: `🚨 Fraud (${fraudCount})` },
+                                { id: 'safe', label: `✅ Safe (${safeCount})` }
+                            ].map(t => (
+                                <button key={t.id} onClick={() => setActiveTab(t.id)}
+                                    style={c.tabBtn(activeTab === t.id, t.id === 'fraud' ? 'var(--danger)' : t.id === 'safe' ? 'var(--success)' : 'var(--accent)')}>
+                                    {t.label}
                                 </button>
                             ))}
                         </div>
                     </div>
 
                     {filtered.length === 0 ? (
-                        <div style={{ textAlign: 'center', padding: '40px', color: '#6b7280' }}>
+                        <div style={{ textAlign: 'center', padding: '48px', color: 'var(--text-muted)' }}>
                             <div style={{ fontSize: '40px', marginBottom: '12px' }}>📭</div>
-                            <div>No transactions yet.</div>
-                            <Link to="/detect" style={{ color: '#3b82f6', textDecoration: 'none', fontSize: '14px' }}>
+                            <div style={{ fontSize: '14px', marginBottom: '8px' }}>No transactions yet</div>
+                            <Link to="/detect" style={{ color: 'var(--accent)', fontSize: '13px', textDecoration: 'none' }}>
                                 Analyze your first transaction →
                             </Link>
                         </div>
                     ) : (
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                             {filtered.map((t, i) => (
-                                <div key={i}
-                                    onClick={() => setSelected(selected?._id === t._id ? null : t)}
-                                    style={{
-                                        background: '#111827', border: `1px solid ${t.isFraud ? '#7f1d1d' : '#1f2937'}`,
-                                        borderRadius: '12px', padding: '14px 18px', cursor: 'pointer',
-                                        transition: 'all 0.2s',
-                                        borderLeft: `4px solid ${t.isFraud ? '#dc2626' : '#16a34a'}`
-                                    }}>
-                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                <div key={i}>
+                                    <div className="tx-row"
+                                        onClick={() => setExpanded(expanded === i ? null : i)}
+                                        style={{
+                                            display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+                                            padding: '14px 16px', borderRadius: '12px', cursor: 'pointer',
+                                            background: 'var(--bg-secondary)', transition: 'all 0.15s',
+                                            borderLeft: `4px solid ${t.isFraud ? 'var(--danger)' : 'var(--success)'}`
+                                        }}>
                                         <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                                            <div style={{
-                                                width: '40px', height: '40px', borderRadius: '10px',
-                                                background: t.isFraud ? '#450a0a' : '#052e16',
-                                                display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '18px'
-                                            }}>
+                                            <div style={{ width: '40px', height: '40px', borderRadius: '10px', background: t.isFraud ? 'var(--danger-light)' : 'var(--success-light)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '18px' }}>
                                                 {t.isFraud ? '🚨' : '✅'}
                                             </div>
                                             <div>
-                                                <div style={{ fontWeight: 600, fontSize: '15px' }}>₹{t.amount.toLocaleString('en-IN')}</div>
-                                                <div style={{ fontSize: '12px', color: '#6b7280' }}>
+                                                <div style={{ fontWeight: 700, fontSize: '15px', color: 'var(--text-primary)' }}>
+                                                    ₹{t.amount.toLocaleString('en-IN')}
+                                                </div>
+                                                <div style={{ fontSize: '12px', color: 'var(--text-muted)' }}>
                                                     {new Date(t.createdAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
                                                 </div>
                                             </div>
                                         </div>
                                         <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                                            {tierBadge(t.riskTier)}
+                                            <span style={c.badge(t.isFraud)}>{t.isFraud ? '🚨 Fraud' : '✅ Safe'}</span>
+                                            <span style={c.tierBadge(t.riskTier)}>{t.riskTier} Risk</span>
                                             <div style={{ textAlign: 'right' }}>
-                                                <div style={{ fontSize: '18px', fontWeight: 700, color: t.riskScore >= 70 ? '#ef4444' : t.riskScore >= 30 ? '#f59e0b' : '#22c55e' }}>
+                                                <div style={{ fontSize: '18px', fontWeight: 800, color: t.riskScore >= 70 ? 'var(--danger)' : t.riskScore >= 30 ? 'var(--warning)' : 'var(--success)' }}>
                                                     {t.riskScore}
                                                 </div>
-                                                <div style={{ fontSize: '10px', color: '#4b5563' }}>risk score</div>
+                                                <div style={{ fontSize: '10px', color: 'var(--text-muted)' }}>risk</div>
                                             </div>
-                                            <div style={{ color: '#4b5563', fontSize: '18px' }}>
-                                                {selected?._id === t._id ? '▲' : '▼'}
-                                            </div>
+                                            <span style={{ color: 'var(--text-muted)', fontSize: '16px' }}>{expanded === i ? '▲' : '▼'}</span>
                                         </div>
                                     </div>
 
-                                    {/* Expanded details */}
-                                    {selected?._id === t._id && (
-                                        <div style={{ marginTop: '14px', paddingTop: '14px', borderTop: '1px solid #1f2937' }}>
-                                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '10px', marginBottom: '12px' }}>
+                                    {expanded === i && (
+                                        <div style={{ background: 'var(--bg-secondary)', borderRadius: '0 0 12px 12px', padding: '14px 16px', marginTop: '-4px', borderLeft: `4px solid ${t.isFraud ? 'var(--danger)' : 'var(--success)'}` }}>
+                                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '10px', marginBottom: t.isFraud ? '12px' : '0' }}>
                                                 {[
                                                     { label: 'Fraud Probability', value: `${(t.fraudProbability * 100).toFixed(1)}%` },
                                                     { label: 'Risk Score', value: `${t.riskScore}/100` },
                                                     { label: 'Risk Tier', value: t.riskTier }
                                                 ].map((d, j) => (
-                                                    <div key={j} style={{ background: '#0d1117', borderRadius: '8px', padding: '10px', textAlign: 'center' }}>
-                                                        <div style={{ fontSize: '11px', color: '#6b7280', marginBottom: '4px' }}>{d.label}</div>
-                                                        <div style={{ fontWeight: 600, fontSize: '15px' }}>{d.value}</div>
+                                                    <div key={j} style={{ background: 'var(--bg-card)', borderRadius: '10px', padding: '12px', textAlign: 'center', border: '1px solid var(--border)' }}>
+                                                        <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginBottom: '4px' }}>{d.label}</div>
+                                                        <div style={{ fontWeight: 700, fontSize: '15px', color: 'var(--text-primary)' }}>{d.value}</div>
                                                     </div>
                                                 ))}
                                             </div>
                                             {t.isFraud && t.recommendations?.length > 0 && (
-                                                <div style={{ background: '#450a0a', borderRadius: '10px', padding: '12px' }}>
-                                                    <div style={{ color: '#fca5a5', fontWeight: 600, fontSize: '13px', marginBottom: '8px' }}>⚠️ Recommended Actions:</div>
+                                                <div style={{ background: 'var(--danger-light)', borderRadius: '10px', padding: '12px', border: '1px solid var(--danger)44' }}>
+                                                    <div style={{ color: 'var(--danger)', fontWeight: 600, fontSize: '13px', marginBottom: '8px' }}>⚠️ Recommended Actions:</div>
                                                     {t.recommendations.slice(0, 3).map((r, j) => (
-                                                        <div key={j} style={{ color: '#f87171', fontSize: '12px', marginBottom: '4px' }}>• {r}</div>
+                                                        <div key={j} style={{ color: 'var(--text-secondary)', fontSize: '12px', marginBottom: '4px' }}>• {r}</div>
                                                     ))}
-                                                    <Link to="/assistance" style={{ color: '#3b82f6', fontSize: '12px', textDecoration: 'none' }}>
-                                                        View all recovery steps →
-                                                    </Link>
+                                                    <Link to="/assistance" style={{ color: 'var(--accent)', fontSize: '12px', textDecoration: 'none' }}>View all steps →</Link>
                                                 </div>
                                             )}
                                         </div>
@@ -360,12 +327,12 @@ const Dashboard = () => {
                     )}
                 </div>
 
-                {/* Footer tip */}
-                <div style={{ marginTop: '20px', background: '#0d1117', border: '1px solid #1f2937', borderRadius: '12px', padding: '14px 20px', display: 'flex', alignItems: 'center', gap: '12px' }}>
+                {/* Safety tip */}
+                <div style={{ ...c.card, marginTop: '16px', display: 'flex', alignItems: 'center', gap: '12px', background: 'var(--accent-light)', border: '1px solid var(--accent)44' }}>
                     <span style={{ fontSize: '20px' }}>💡</span>
-                    <div style={{ fontSize: '13px', color: '#6b7280' }}>
-                        <strong style={{ color: '#9ca3af' }}>Safety Tip:</strong> Always verify the receiver name shown in your UPI app before confirming any payment. Send ₹1 first to unknown UPI IDs.
-                        <Link to="/assistance" style={{ color: '#3b82f6', marginLeft: '8px', textDecoration: 'none' }}>Learn more →</Link>
+                    <div style={{ fontSize: '13px', color: 'var(--text-secondary)' }}>
+                        <strong style={{ color: 'var(--text-primary)' }}>Safety Tip:</strong> Always verify the receiver name shown in your UPI app before confirming payment. Send ₹1 first to unknown UPI IDs.
+                        <Link to="/assistance" style={{ color: 'var(--accent)', marginLeft: '6px', textDecoration: 'none' }}>Learn more →</Link>
                     </div>
                 </div>
             </div>
