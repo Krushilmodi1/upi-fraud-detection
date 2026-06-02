@@ -23,7 +23,6 @@ const LiveDot = ({ color }) => (
         boxShadow: `0 0 6px ${color}`
     }} />
 );
-
 const StatCard = ({ icon, label, value, sub, color, trend }) => (
     <div style={{
         background: '#0a0f1a', border: `1px solid ${color}33`,
@@ -61,11 +60,22 @@ const AdminDashboard = () => {
     const [searchUser, setSearchUser] = useState('');
     const [time, setTime] = useState(new Date());
 
-    useEffect(() => {
+   useEffect(() => {
+    fetchAll();
+
+    const refreshInterval = setInterval(() => {
         fetchAll();
-        const clock = setInterval(() => setTime(new Date()), 1000);
-        return () => clearInterval(clock);
-    }, []);
+    }, 10000);
+
+    const clockInterval = setInterval(() => {
+        setTime(new Date());
+    }, 1000);
+
+    return () => {
+        clearInterval(refreshInterval);
+        clearInterval(clockInterval);
+    };
+}, []);
 
     const fetchAll = async () => {
         try {
