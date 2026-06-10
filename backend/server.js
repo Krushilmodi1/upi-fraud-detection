@@ -9,7 +9,13 @@ connectDB();
 
 const app = express();
 
-app.use(cors());
+app.use(cors({
+    origin: [
+        'http://localhost:5173',
+        'https://upi-frauddetection.netlify.app'
+    ],
+    credentials: true
+}));
 app.use(express.json());
 app.use(morgan('dev'));
 
@@ -18,6 +24,7 @@ app.use('/api/transactions', require('./src/routes/transactions'));
 app.use('/api/analytics', require('./src/routes/analytics'));
 app.use('/api/admin', require('./src/routes/admin'));
 app.use('/api/complaints', require('./src/routes/complaints'));
+
 app.get('/', (req, res) => {
     res.json({ message: 'UPI Fraud Detection Backend', status: 'running' });
 });
