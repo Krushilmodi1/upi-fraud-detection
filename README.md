@@ -190,7 +190,7 @@ Backend runs at: `http://localhost:5000`
 ## 👥 Contributors
 
 - **Krushil Modi** — [@Krushilmodi1](https://github.com/Krushilmodi1)
-
+- **Rakshit Soni** — [@Rakshitsoni1410](https://github.com/Rakshitsoni1410)
 ---
 
 ## 📄 License
