@@ -15,7 +15,6 @@ const Navbar = () => {
   const [adminHigh, setAdminHigh] = useState(0);
   const [mobileOpen, setMobileOpen] = useState(false);
 
-  // ── Fetch notifications based on role ──────────────────────────────────────
   useEffect(() => {
     if (!user) return;
     const fetch = user.role === "admin" ? fetchAdminAlerts : fetchUserAlerts;
@@ -53,10 +52,10 @@ const Navbar = () => {
   };
   const isActive = (path) => location.pathname === path;
 
-  // ── Shared styles ───────────────────────────────────────────────────────────
+  // ── Shared styles — now use isDark directly so React re-renders on toggle ──
   const userNavStyle = {
-    background: "var(--bg-card)",
-    borderBottom: "1px solid var(--border)",
+    background: isDark ? "#0a0f1a" : "#ffffff",
+    borderBottom: `1px solid ${isDark ? "#1f2937" : "#e2e8f0"}`,
     padding: "0 24px",
     display: "flex",
     justifyContent: "space-between",
@@ -65,7 +64,7 @@ const Navbar = () => {
     position: "sticky",
     top: 0,
     zIndex: 200,
-    boxShadow: "var(--shadow)",
+    boxShadow: isDark ? "0 1px 3px rgba(0,0,0,0.4)" : "0 1px 3px rgba(0,0,0,0.1)",
     transition: "background 0.2s, border 0.2s",
   };
 
@@ -84,14 +83,14 @@ const Navbar = () => {
   };
 
   const userLinkStyle = (active) => ({
-    color: active ? "var(--accent)" : "var(--text-secondary)",
+    color: active ? (isDark ? "#3b82f6" : "#2563eb") : (isDark ? "#94a3b8" : "#475569"),
     textDecoration: "none",
     fontSize: "13px",
     fontWeight: active ? 600 : 500,
     padding: "6px 10px",
     borderRadius: "8px",
     transition: "all 0.15s",
-    background: active ? "var(--accent-light)" : "transparent",
+    background: active ? (isDark ? "#0c1a2e" : "#eff6ff") : "transparent",
     whiteSpace: "nowrap",
   });
 
@@ -111,8 +110,8 @@ const Navbar = () => {
     width: "34px",
     height: "34px",
     borderRadius: "10px",
-    border: "1px solid var(--border)",
-    background: "var(--bg-secondary)",
+    border: `1px solid ${isDark ? "#1f2937" : "#e2e8f0"}`,
+    background: isDark ? "#0d1117" : "#f8fafc",
     cursor: "pointer",
     display: "flex",
     alignItems: "center",
@@ -146,7 +145,7 @@ const Navbar = () => {
       <nav style={userNavStyle}>
         <style>{`
           @keyframes navPulse{0%,100%{opacity:1}50%{opacity:0.6}}
-          .nav-user-link:hover{background:var(--bg-hover)!important;color:var(--text-primary)!important}
+          .nav-user-link:hover{background:${isDark ? "#111827" : "#f1f5f9"}!important;color:${isDark ? "#f1f5f9" : "#0f172a"}!important}
         `}</style>
         <Link
           to="/"
@@ -157,7 +156,7 @@ const Navbar = () => {
             textDecoration: "none",
             fontWeight: 800,
             fontSize: "16px",
-            color: "var(--accent)",
+            color: isDark ? "#3b82f6" : "#2563eb",
           }}
         >
           🛡️ UPI FraudGuard
@@ -173,14 +172,14 @@ const Navbar = () => {
           <Link
             to="/login"
             style={{
-              color: "var(--text-secondary)",
+              color: isDark ? "#94a3b8" : "#475569",
               textDecoration: "none",
               fontSize: "14px",
               fontWeight: 500,
               padding: "7px 14px",
               borderRadius: "8px",
-              border: "1px solid var(--border)",
-              background: "var(--bg-secondary)",
+              border: `1px solid ${isDark ? "#1f2937" : "#e2e8f0"}`,
+              background: isDark ? "#0d1117" : "#f8fafc",
             }}
           >
             Login
@@ -188,7 +187,7 @@ const Navbar = () => {
           <Link
             to="/register"
             style={{
-              background: "var(--accent)",
+              background: isDark ? "#3b82f6" : "#2563eb",
               color: "white",
               textDecoration: "none",
               fontSize: "14px",
@@ -210,11 +209,7 @@ const Navbar = () => {
       { to: "/admin", hash: "", label: "📊 Overview" },
       { to: "/admin#complaints", hash: "complaints", label: "📋 Complaints" },
       { to: "/admin#users", hash: "users", label: "👥 Users" },
-      {
-        to: "/admin#transactions",
-        hash: "transactions",
-        label: "💳 Transactions",
-      },
+      { to: "/admin#transactions", hash: "transactions", label: "💳 Transactions" },
       { to: "/admin#model", hash: "model", label: "🤖 ML Model" },
     ];
 
@@ -228,7 +223,6 @@ const Navbar = () => {
           .admin-alert:hover{opacity:0.85}
         `}</style>
 
-        {/* Left — Logo + Alerts */}
         <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
           <Link
             to="/admin"
@@ -274,17 +268,8 @@ const Navbar = () => {
                 transition: "opacity 0.15s",
               }}
             >
-              <span
-                style={{
-                  fontSize: "11px",
-                  animation: "navPulse 1.5s infinite",
-                }}
-              >
-                🔔
-              </span>
-              <span
-                style={{ color: "#fb923c", fontSize: "12px", fontWeight: 600 }}
-              >
+              <span style={{ fontSize: "11px", animation: "navPulse 1.5s infinite" }}>🔔</span>
+              <span style={{ color: "#fb923c", fontSize: "12px", fontWeight: 600 }}>
                 {adminPending} pending
               </span>
             </Link>
@@ -308,28 +293,20 @@ const Navbar = () => {
               }}
             >
               <span style={{ fontSize: "11px" }}>🚨</span>
-              <span
-                style={{ color: "#f87171", fontSize: "12px", fontWeight: 600 }}
-              >
+              <span style={{ color: "#f87171", fontSize: "12px", fontWeight: 600 }}>
                 {adminHigh} urgent
               </span>
             </Link>
           )}
         </div>
 
-        {/* Right — Tab links + User */}
         <div style={{ display: "flex", alignItems: "center", gap: "2px" }}>
           {adminTabs.map((l) => {
             const active =
               location.pathname === "/admin" &&
               ((!l.hash && !currentHash) || l.hash === currentHash);
             return (
-              <Link
-                key={l.to}
-                to={l.to}
-                className="admin-link"
-                style={adminLinkStyle(active)}
-              >
+              <Link key={l.to} to={l.to} className="admin-link" style={adminLinkStyle(active)}>
                 {l.label}
               </Link>
             );
@@ -365,25 +342,10 @@ const Navbar = () => {
                 {user.name?.charAt(0).toUpperCase()}
               </div>
               <div>
-                <div
-                  style={{
-                    fontSize: "12px",
-                    fontWeight: 700,
-                    color: "white",
-                    lineHeight: 1,
-                  }}
-                >
+                <div style={{ fontSize: "12px", fontWeight: 700, color: "white", lineHeight: 1 }}>
                   {user.name}
                 </div>
-                <div
-                  style={{
-                    fontSize: "9px",
-                    color: "#dc2626",
-                    fontWeight: 700,
-                    letterSpacing: "1px",
-                    marginTop: "2px",
-                  }}
-                >
+                <div style={{ fontSize: "9px", color: "#dc2626", fontWeight: 700, letterSpacing: "1px", marginTop: "2px" }}>
                   ADMINISTRATOR
                 </div>
               </div>
@@ -412,7 +374,7 @@ const Navbar = () => {
     );
   }
 
-  // ── USER NAVBAR ──────────────────────────────────────────────────────────
+  // ── USER NAVBAR ────────────────────────────────────────────────────────────
   const userLinks = [
     { to: "/dashboard", label: "🏠 Dashboard" },
     { to: "/detect", label: "🔍 Detect Fraud" },
@@ -426,7 +388,7 @@ const Navbar = () => {
     <nav style={userNavStyle}>
       <style>{`
         @keyframes navPulse{0%,100%{opacity:1}50%{opacity:0.6}}
-        .nav-user-link:hover{background:var(--bg-hover)!important;color:var(--text-primary)!important}
+        .nav-user-link:hover{background:${isDark ? "#111827" : "#f1f5f9"}!important;color:${isDark ? "#f1f5f9" : "#0f172a"}!important}
       `}</style>
 
       {/* Logo */}
@@ -439,14 +401,14 @@ const Navbar = () => {
           textDecoration: "none",
           fontWeight: 800,
           fontSize: "16px",
-          color: "var(--accent)",
+          color: isDark ? "#3b82f6" : "#2563eb",
           flexShrink: 0,
         }}
       >
         🛡️{" "}
         <span
           style={{
-            background: "linear-gradient(135deg,var(--accent),#8b5cf6)",
+            background: "linear-gradient(135deg,#3b82f6,#8b5cf6)",
             WebkitBackgroundClip: "text",
             WebkitTextFillColor: "transparent",
           }}
@@ -458,23 +420,14 @@ const Navbar = () => {
       {/* Links */}
       <div style={{ display: "flex", alignItems: "center", gap: "2px" }}>
         {userLinks.map((l) => (
-          <Link
-            key={l.to}
-            to={l.to}
-            className="nav-user-link"
-            style={userLinkStyle(isActive(l.to))}
-          >
+          <Link key={l.to} to={l.to} className="nav-user-link" style={userLinkStyle(isActive(l.to))}>
             {l.label}
           </Link>
         ))}
 
         {/* Complaints with badge */}
         <div style={{ position: "relative" }}>
-          <Link
-            to="/complaints"
-            className="nav-user-link"
-            style={userLinkStyle(isActive("/complaints"))}
-          >
+          <Link to="/complaints" className="nav-user-link" style={userLinkStyle(isActive("/complaints"))}>
             📋 Complaints
           </Link>
           {userNotifications > 0 && (
@@ -490,7 +443,7 @@ const Navbar = () => {
             gap: "8px",
             marginLeft: "10px",
             paddingLeft: "12px",
-            borderLeft: "1px solid var(--border)",
+            borderLeft: `1px solid ${isDark ? "#1f2937" : "#e2e8f0"}`,
           }}
         >
           {/* Theme toggle */}
@@ -512,17 +465,17 @@ const Navbar = () => {
               textDecoration: "none",
               padding: "4px 8px",
               borderRadius: "10px",
-              border: "1px solid var(--border)",
-              background: "var(--bg-secondary)",
+              border: `1px solid ${isDark ? "#1f2937" : "#e2e8f0"}`,
+              background: isDark ? "#0d1117" : "#f8fafc",
               transition: "all 0.15s",
             }}
             onMouseEnter={(e) => {
-              e.currentTarget.style.borderColor = "var(--accent)";
-              e.currentTarget.style.background = "var(--accent-light)";
+              e.currentTarget.style.borderColor = isDark ? "#3b82f6" : "#2563eb";
+              e.currentTarget.style.background = isDark ? "#0c1a2e" : "#eff6ff";
             }}
             onMouseLeave={(e) => {
-              e.currentTarget.style.borderColor = "var(--border)";
-              e.currentTarget.style.background = "var(--bg-secondary)";
+              e.currentTarget.style.borderColor = isDark ? "#1f2937" : "#e2e8f0";
+              e.currentTarget.style.background = isDark ? "#0d1117" : "#f8fafc";
             }}
           >
             <div
@@ -530,7 +483,7 @@ const Navbar = () => {
                 width: "28px",
                 height: "28px",
                 borderRadius: "50%",
-                background: "linear-gradient(135deg,var(--accent),#8b5cf6)",
+                background: "linear-gradient(135deg,#3b82f6,#8b5cf6)",
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "center",
@@ -543,16 +496,10 @@ const Navbar = () => {
               {user.name?.charAt(0).toUpperCase()}
             </div>
             <div style={{ lineHeight: 1 }}>
-              <div
-                style={{
-                  fontSize: "13px",
-                  fontWeight: 600,
-                  color: "var(--text-primary)",
-                }}
-              >
+              <div style={{ fontSize: "13px", fontWeight: 600, color: isDark ? "#f1f5f9" : "#0f172a" }}>
                 {user.name}
               </div>
-              <div style={{ fontSize: "10px", color: "var(--text-muted)" }}>
+              <div style={{ fontSize: "10px", color: isDark ? "#475569" : "#94a3b8" }}>
                 My Account
               </div>
             </div>
@@ -562,7 +509,7 @@ const Navbar = () => {
           <button
             onClick={handleLogout}
             style={{
-              background: "var(--danger)",
+              background: isDark ? "#ef4444" : "#dc2626",
               color: "white",
               border: "none",
               borderRadius: "8px",
@@ -573,12 +520,8 @@ const Navbar = () => {
               transition: "all 0.15s",
               flexShrink: 0,
             }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.opacity = "0.85";
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.opacity = "1";
-            }}
+            onMouseEnter={(e) => { e.currentTarget.style.opacity = "0.85"; }}
+            onMouseLeave={(e) => { e.currentTarget.style.opacity = "1"; }}
           >
             Logout
           </button>
