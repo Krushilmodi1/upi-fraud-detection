@@ -1,34 +1,35 @@
-const express = require("express");
-const cors = require("cors");
-const morgan = require("morgan");
-const dotenv = require("dotenv");
-const connectDB = require("./src/config/db");
+const express = require('express');
+const cors = require('cors');
+const morgan = require('morgan');
+const dotenv = require('dotenv');
+const connectDB = require('./src/config/db');
 
 dotenv.config();
 connectDB();
 
 const app = express();
 
-app.use(
-    cors({
-        origin: ["http://localhost:5173", "https://upi-frauddetection.netlify.app"],
-        credentials: true,
-    }),
-);
-
-app.options("*", cors()); // 👈 ADD THIS LINE - handles preflight requests
+app.use(cors({
+    origin: [
+        'http://localhost:5173',
+        'https://upi-frauddetection.netlify.app'
+    ],
+    credentials: true,
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization']
+}));
 
 app.use(express.json());
-app.use(morgan("dev"));
+app.use(morgan('dev'));
 
-app.use("/api/auth", require("./src/routes/auth"));
-app.use("/api/transactions", require("./src/routes/transactions"));
-app.use("/api/analytics", require("./src/routes/analytics"));
-app.use("/api/admin", require("./src/routes/admin"));
-app.use("/api/complaints", require("./src/routes/complaints"));
+app.use('/api/auth', require('./src/routes/auth'));
+app.use('/api/transactions', require('./src/routes/transactions'));
+app.use('/api/analytics', require('./src/routes/analytics'));
+app.use('/api/admin', require('./src/routes/admin'));
+app.use('/api/complaints', require('./src/routes/complaints'));
 
-app.get("/", (req, res) => {
-    res.json({ message: "UPI Fraud Detection Backend", status: "running" });
+app.get('/', (req, res) => {
+    res.json({ message: 'UPI Fraud Detection Backend', status: 'running' });
 });
 
 app.use((err, req, res, next) => {
