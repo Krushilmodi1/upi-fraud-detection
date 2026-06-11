@@ -2,7 +2,15 @@
 @tailwind components;
 @tailwind utilities;
 
-:root {
+@layer base {
+  html {
+    background-color: var(--bg-primary);
+    color: var(--text-primary);
+    min-height: 100vh;
+  }
+}
+
+html {
   --bg-primary: #ffffff;
   --bg-secondary: #f8fafc;
   --bg-card: #ffffff;
@@ -24,7 +32,7 @@
   --shadow-md: 0 4px 12px rgba(0,0,0,0.08);
 }
 
-[data-theme="dark"] {
+html[data-theme="dark"] {
   --bg-primary: #030712;
   --bg-secondary: #0d1117;
   --bg-card: #0a0f1a;
@@ -46,7 +54,6 @@
   --shadow-md: 0 4px 12px rgba(0,0,0,0.3);
 }
 
-/* ── Apply theme to everything ── */
 html, body, #root {
   min-height: 100vh;
   background: var(--bg-primary);
